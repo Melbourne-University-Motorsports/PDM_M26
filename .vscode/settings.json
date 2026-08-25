@@ -1,0 +1,7 @@
+{
+  "cmake.configureOnOpen": true,
+  "cmake.useCMakePresets": "always",
+  "cmake.configurePreset": "Debug",
+  "cmake.buildPreset": "Debug",
+  "cmake.cmakePath": "/opt/homebrew/bin/cmake"
+}
