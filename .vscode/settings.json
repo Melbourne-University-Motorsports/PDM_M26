@@ -4,8 +4,8 @@
   "cmake.configurePreset": "Debug",
   "cmake.buildPreset": "Debug",
   "cmake.cmakePath": "cube-cmake",
-  "stm32-for-vscode.openOCDPath": false,
-  "stm32-for-vscode.armToolchainPath": false,
+  "cortex-debug.armToolchainPath": "/opt/homebrew/bin",
+  "cortex-debug.openocdPath": "/opt/homebrew/bin/openocd",
   "cmake.configureArgs": [
     "-DCMAKE_COMMAND=cube-cmake"
   ],
