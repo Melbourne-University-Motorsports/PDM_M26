@@ -1,6 +1,7 @@
 # PDM_M26
 
 Testing code for M26 PDM:
+Haven't done any CAN firmware yet
 
 ### Pinouts
 ---
