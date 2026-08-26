@@ -170,7 +170,7 @@ int main(void)
     highcurrent_diag = HAL_GPIO_ReadPin(GPIOF, GPIO_PIN_1);
 
     /* --- Overcurrent protection: keep each switch enabled unless its sense current hits 7A --- */
-    pump_tripped = (i_pump >= OVERCURRENT_LIMIT_A);
+    pump_tripped = (i_pump >= 4.500f);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, pump_tripped ? GPIO_PIN_RESET : GPIO_PIN_SET);
 
     highcurrent_tripped = (i_highcurrent >= OVERCURRENT_LIMIT_A);

@@ -1,7 +1,12 @@
 # PDM_M26
 
-Testing code for M26 PDM:
-Haven't done any CAN firmware yet
+Testing code for M26 PDM with a STM32 Nucleo32 G431KB.
+*Haven't done any CAN firmware yet*
+
+Build with CMake and then use the Flash Task to flash the board. Run a live debug session. Use Serial monitor to open an SWO:ITM terminal for the ST-link connection (Idk if thats how ur supposed to do it but it works) and you should see the readings print.
+
+Overcurrent limit for 3 High side switches (Fan 1, 2, HighCurrent) is set to 7A, 
+Pump out is limited to 4A because it is fused for 5A
 
 ### Pinouts
 ---
