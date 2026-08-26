@@ -48,8 +48,9 @@ FDCAN_HandleTypeDef hfdcan1;
 TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN PV */
-#define VDDA_VOLTAGE   3.3f
-#define ADC_MAX_COUNT  4095.0f
+#define VDDA_VOLTAGE        3.3f
+#define ADC_MAX_COUNT       4095.0f
+#define OVERCURRENT_LIMIT_A 7.0f
 
 /* Raw ADC results */
 uint32_t adc1_raw[4]; /* Rank1=PA0 BattRef, Rank2=PA1 Pump, Rank3=PA2 Fan2, Rank4=PA3 unused */
@@ -61,6 +62,9 @@ float i_pump, i_fan1, i_fan2, i_highcurrent, i_lowcurrent1, i_lowcurrent2;
 
 /* Diagnostic inputs */
 uint8_t fan1_diag, fan2_diag, pump_diag, highcurrent_diag;
+
+/* Switch trip states (for printing/status only; GPIO write is the actual source of truth) */
+uint8_t pump_tripped, fan1_tripped, fan2_tripped, highcurrent_tripped;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,7 +82,7 @@ static float RawToVoltage(uint32_t raw);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/* Retarget printf() to SWO (ITM) so it shows up in the SWV Console during debug */
+/* Retarget printf() to SWO (ITM) so it shows up in the SWV/ITM console during a debug session */
 int _write(int file, char *ptr, int len)
 {
   for (int i = 0; i < len; i++)
@@ -123,9 +127,11 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  /* Ensure outputs start OFF/LOW (safe state) */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET); /* Pump Enable OFF */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);  /* High Current Enable OFF */
+  /* Enable all switches by default (safe start = everything ON, protection kicks in below) */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET); /* Pump Enable ON */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4,  GPIO_PIN_SET); /* High Current Enable ON */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7,  GPIO_PIN_SET); /* Fan1 Enable ON */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8,  GPIO_PIN_SET); /* Fan2 Enable ON */
 
   printf("PDM_M26 starting up...\r\n");
   /* USER CODE END 2 */
@@ -157,21 +163,30 @@ int main(void)
     pump_diag        = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6);
     highcurrent_diag = HAL_GPIO_ReadPin(GPIOF, GPIO_PIN_1);
 
-    /* --- Toggle outputs for testing --- */
-    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_15); /* Pump Enable */
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);  /* High Current Enable */
+    /* --- Overcurrent protection: keep each switch enabled unless its sense current hits 7A --- */
+    pump_tripped = (i_pump >= OVERCURRENT_LIMIT_A);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, pump_tripped ? GPIO_PIN_RESET : GPIO_PIN_SET);
 
-    /* --- Print readings --- */
-    printf("VbattRef=%.3fV | Pump=%.3fA (diag=%d) | Fan1=%.3fA (diag=%d) | Fan2=%.3fA (diag=%d) | HighCurr=%.3fA (diag=%d) | LowCurr1=%.3fA | LowCurr2=%.3fA\r\n",
+    highcurrent_tripped = (i_highcurrent >= OVERCURRENT_LIMIT_A);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, highcurrent_tripped ? GPIO_PIN_RESET : GPIO_PIN_SET);
+
+    fan1_tripped = (i_fan1 >= OVERCURRENT_LIMIT_A);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, fan1_tripped ? GPIO_PIN_RESET : GPIO_PIN_SET);
+
+    fan2_tripped = (i_fan2 >= OVERCURRENT_LIMIT_A);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, fan2_tripped ? GPIO_PIN_RESET : GPIO_PIN_SET);
+
+    /* --- Print voltage/current readings continuously --- */
+    printf("VbattRef=%.3fV | Pump=%.3fA%s (diag=%d) | Fan1=%.3fA%s (diag=%d) | Fan2=%.3fA%s (diag=%d) | HighCurr=%.3fA%s (diag=%d) | LowCurr1=%.3fA | LowCurr2=%.3fA\r\n",
            v_battery_ref,
-           i_pump, pump_diag,
-           i_fan1, fan1_diag,
-           i_fan2, fan2_diag,
-           i_highcurrent, highcurrent_diag,
+           i_pump,        pump_tripped        ? " [TRIPPED]" : "", pump_diag,
+           i_fan1,        fan1_tripped        ? " [TRIPPED]" : "", fan1_diag,
+           i_fan2,        fan2_tripped        ? " [TRIPPED]" : "", fan2_diag,
+           i_highcurrent, highcurrent_tripped ? " [TRIPPED]" : "", highcurrent_diag,
            i_lowcurrent1,
            i_lowcurrent2);
 
-    HAL_Delay(1000);
+    HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }
