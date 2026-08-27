@@ -1,5 +1,7 @@
 # PDM_M26
 
+> Fan 1 and 2 need to be changed to Timer pins in stm32cubeMX
+
 Testing code for M26 PDM with a STM32 Nucleo32 G431KB.
 *Haven't done any CAN firmware yet*
 
